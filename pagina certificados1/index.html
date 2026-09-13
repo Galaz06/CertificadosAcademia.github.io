@@ -2,28 +2,32 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/png" href="img\favicon.ico">
   <title>Certificados</title>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    html, body {
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-    }
-    iframe {
-      width: 100%;
-      height: 100%;
-      border: none;
-    }
+    /* Esto hace que el visor ocupe toda la pantalla */
+    body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+    iframe { width: 100%; height: 100%; border: none; }
   </style>
 </head>
 <body>
-  <iframe src="https://script.google.com/macros/s/AKfycbylThaJPvJgHYggs0dSZg9ovb1LoKOviX-OoA5EqPM3bR8pDJavkD-kdpHDlJFq9g9k/exec"></iframe>
+
+  <!-- Aquí es donde aparecerá mágicamente el visor de la Imagen 2 -->
+  <iframe id="visorPDF"></iframe>
+
+  <script>
+    // 1. Pon aquí la URL que te da Google Apps Script al publicar (la que termina en /exec)
+    const urlDeGoogle = 'https://script.google.com/macros/s/AKfycbylThaJPvJgHYggs0dSZg9ovb1LoKOviX-OoA5EqPM3bR8pDJavkD-kdpHDlJFq9g9k/exec';
+
+    // 2. Llamamos al script
+    fetch(urlDeGoogle)
+      .then(respuesta => respuesta.text())
+      .then(base64 => {
+        // 3. Le inyectamos el PDF al iframe. ¡Como estamos en Netlify, Chrome cargará su visor nativo completo!
+        document.getElementById('visorPDF').src = "data:application/pdf;base64," + base64;
+      })
+      .catch(error => console.error("Error al cargar el PDF:", error));
+  </script>
+
 </body>
 </html>
