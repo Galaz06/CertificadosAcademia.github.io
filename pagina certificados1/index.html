@@ -2,31 +2,91 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <link rel="icon" type="image/png" href="img\favicon.ico">
-  <title>Certificados</title>
+  <link rel="icon" type="image/png" href="img/favicon.ico">
+  <title>Certificados Volvo</title>
   <style>
-    /* Esto hace que el visor ocupe toda la pantalla */
-    body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
-    iframe { width: 100%; height: 100%; border: none; }
+    body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: Arial, sans-serif; }
+    
+    /* El iframe está oculto por defecto hasta que cargue el PDF */
+    iframe { width: 100%; height: 100%; border: none; display: none; }
+    
+    /* Estilos para los mensajes de carga y error */
+    #mensaje-contenedor {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      text-align: center;
+      padding: 20px;
+    }
+    
+    .spinner {
+      border: 4px solid #f3f3f3; border-top: 4px solid #3498db;
+      border-radius: 50%; width: 40px; height: 40px;
+      animation: spin 1s linear infinite; margin-bottom: 20px;
+    }
+    
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    
+    .error-texto { color: #d32f2f; font-weight: bold; font-size: 1.2rem; }
   </style>
 </head>
 <body>
 
-  <!-- Aquí es donde aparecerá mágicamente el visor de la Imagen 2 -->
+  <!-- Contenedor para mostrar mensajes (Cargando / Error) -->
+  <div id="mensaje-contenedor">
+    <div id="spinner" class="spinner"></div>
+    <p id="texto-estado">Buscando datos y generando certificado... por favor espera.</p>
+  </div>
+
+  <!-- El visor del PDF -->
   <iframe id="visorPDF"></iframe>
 
   <script>
-    // 1. Pon aquí la URL que te da Google Apps Script al publicar (la que termina en /exec)
-    const urlDeGoogle = 'https://script.google.com/macros/s/AKfycbylThaJPvJgHYggs0dSZg9ovb1LoKOviX-OoA5EqPM3bR8pDJavkD-kdpHDlJFq9g9k/exec';
+    // 1. URL de tu Web App de Google Apps Script (¡Asegúrate de pegar la nueva que termines en /exec!)
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbylThaJPvJgHYggs0dSZg9ovb1LoKOviX-OoA5EqPM3bR8pDJavkD-kdpHDlJFq9g9k/exec';
 
-    // 2. Llamamos al script
-    fetch(urlDeGoogle)
-      .then(respuesta => respuesta.text())
-      .then(base64 => {
-        // 3. Le inyectamos el PDF al iframe. ¡Como estamos en Netlify, Chrome cargará su visor nativo completo!
-        document.getElementById('visorPDF').src = "data:application/pdf;base64," + base64;
-      })
-      .catch(error => console.error("Error al cargar el PDF:", error));
+    // 2. Obtener el ID de la URL (Ejemplo: https://tu-sitio.netlify.app/?id=5050)
+    const urlParams = new URLSearchParams(window.location.search);
+    const idParam = urlParams.get('id');
+
+    const mensajeContenedor = document.getElementById('mensaje-contenedor');
+    const textoEstado = document.getElementById('texto-estado');
+    const spinner = document.getElementById('spinner');
+    const visorPDF = document.getElementById('visorPDF');
+
+    // Si no hay ID en la URL, mostramos error de inmediato
+    if (!idParam) {
+      spinner.style.display = 'none';
+      textoEstado.className = 'error-texto';
+      textoEstado.innerText = 'Error: No se encontró ningún ID en la URL. Escanea el código QR nuevamente.';
+    } else {
+      // 3. Llamar a Google Apps Script pasando el ID como parámetro
+      fetch(`${scriptURL}?id=${idParam}`)
+        .then(respuesta => respuesta.json()) // ¡Ahora esperamos un JSON!
+        .then(datos => {
+          if (datos.status === 'success') {
+            // Ocultar mensajes de carga y mostrar el iframe
+            mensajeContenedor.style.display = 'none';
+            visorPDF.style.display = 'block';
+            
+            // Inyectar el PDF
+            visorPDF.src = "data:application/pdf;base64," + datos.base64;
+          } else {
+            // Mostrar el mensaje de error que devolvió Apps Script (Ej: ID no encontrado)
+            spinner.style.display = 'none';
+            textoEstado.className = 'error-texto';
+            textoEstado.innerText = datos.message;
+          }
+        })
+        .catch(error => {
+          console.error("Error en la conexión:", error);
+          spinner.style.display = 'none';
+          textoEstado.className = 'error-texto';
+          textoEstado.innerText = 'Hubo un error de conexión al intentar generar el certificado.';
+        });
+    }
   </script>
 
 </body>
